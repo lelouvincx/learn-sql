@@ -30,3 +30,7 @@ not a token. `npm run lint` runs the same checks without writing, and CI runs it
 
 The 3D figure is drawn with the Colorfigures engine by April Zhu (`public/core.js`, MIT, see
 [COLORFIGURES-LICENSE](COLORFIGURES-LICENSE)).
+
+## License
+
+[MIT](LICENSE) © 2026 Chinh Dinh (dinhminhchinh3357@gmail.com).
