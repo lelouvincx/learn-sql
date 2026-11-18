@@ -1,0 +1,27 @@
+{
+  "name": "learn-sql",
+  "version": "1.0.0",
+  "description": "Learn to think in SQL as sets, on a hand-drawn isometric grid.",
+  "scripts": {
+    "dev": "npm run design && cf dev",
+    "build": "npm run lint && cf build",
+    "design": "node scripts/design.mjs",
+    "lint": "node scripts/design.mjs --check",
+    "deploy": "npm run build && cf deploy --prebuilt"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "sql.js": "^1.16.0"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^2.0.0-rc.1",
+    "@google/design.md": "^0.4.0",
+    "cf": "^1.0.0-rc.1",
+    "postcss": "^8.5.33",
+    "vite": "^8.3.8",
+    "yaml": "^2.9.1"
+  },
+  "type": "module"
+}
