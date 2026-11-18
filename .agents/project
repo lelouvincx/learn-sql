@@ -11,7 +11,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 case "$1" in
 	setup)
-		# Add application installation and first-run preparation here.
+		npm ci
 		;;
 	resume)
 		# Add application resume work here.

@@ -12,3 +12,5 @@
 - Amp readback omits Ship and additional repositories; the local apply receipt does not prove their remote state. To reapply after hidden drift, unset only `agentInfrastructure.ampReceipt` in local Git config and rerun configuration; preserve `agentInfrastructure.ampProjectID` for recovery.
 - Keep secrets in 1Password. Local env files contain `op://` references only; resolve secrets at execution time.
 - Store transient evidence under `.amp/in/artifacts/`. Preserve unrelated work and runtime files.
+- Learn SQL is a Vite site deployed as an assets-only Cloudflare Worker (`cloudflare.config.ts`) on `learn-sql.lelouvincx.com`. Deploy with `npm run deploy` (the `cf` CLI) only from merged `main`.
+- Change design values in `DESIGN.md`, then run `npm run design`; never hand-edit `src/tokens.css` or `src/tokens.js`. `npm run lint` must pass before delivery.
