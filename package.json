@@ -10,8 +10,8 @@
     "deploy": "npm run build && cf deploy --prebuilt"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Chinh Dinh <dinhminhchinh3357@gmail.com>",
+  "license": "MIT",
   "dependencies": {
     "sql.js": "^1.16.0"
   },
