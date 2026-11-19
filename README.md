@@ -19,6 +19,17 @@ npm run deploy       # build, then deploy the Worker to learn-sql.lelouvincx.com
 
 Queries run in the browser on a fresh SQLite database ([sql.js](https://sql.js.org)) for every run.
 
+## Deployment
+
+Every push to `main` automatically deploys to <https://learn-sql.lelouvincx.com> through
+GitHub Actions after the shell lifecycle and application checks pass. Pull requests and other
+branches run checks only. Failed checks block deployment.
+
+Main runs are queued rather than canceled or run concurrently, so rapid pushes retain their
+deployments (up to GitHub's limit of 100 pending runs). The repository Actions secret
+`CLOUDFLARE_API_TOKEN` supplies the deployment credential; the account and Worker are set in
+`cloudflare.config.ts`.
+
 ## Design system
 
 [DESIGN.md](DESIGN.md) is the single source of truth for every colour, type style, spacing step,

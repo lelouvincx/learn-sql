@@ -2,6 +2,10 @@ name: Shell lifecycle
 on: [push, pull_request]
 permissions:
   contents: read
+# Serialize main runs, including their checks, without replacing pending pushes.
+concurrency:
+  group: checks-${{ github.ref == 'refs/heads/main' && 'production' || github.run_id }}
+  queue: max
 jobs:
   lifecycle:
     runs-on: ubuntu-latest
@@ -24,3 +28,21 @@ jobs:
         run: npm run lint
       - name: Build the site for Cloudflare
         run: npm run build
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [lifecycle, application]
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://learn-sql.lelouvincx.com
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Deploy to Cloudflare
+        run: npm run deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
