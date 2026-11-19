@@ -4,8 +4,9 @@ Learn to think in SQL as sets, not loops. Each lesson puts a table on a hand-dra
 every row is a bar you can turn and shuffle, and every `WHERE` condition lights the field it reads
 on every row at once, so `AND`, `OR` and `NOT` show up as intersection, union and complement.
 
-Live at <https://learn-sql.lelouvincx.com>. Lesson 1, *Sets & subsets*, is built; the rest are
-stubs.
+Live at <https://learn-sql.lelouvincx.com>. [PRODUCT.md](PRODUCT.md) says who it is for and lists
+the seven-lesson curriculum; lesson 1, *Sets & subsets*, is built and the rest are stubs. The site
+publishes the same file at `/product.md`.
 
 ## Run it
 

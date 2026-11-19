@@ -407,6 +407,8 @@ code {
 .lesson-list .is-done b::after { content: ' ✓'; }
 .lesson-list .is-soon button { cursor: default; opacity: .45; box-shadow: none; }
 .lesson-list .is-soon small::after { content: ' · soon'; }
+.lesson-list .is-next button { border-style: dashed; }
+.lesson-list .is-next small::after { content: none; }
 
 /* ---------- maximized: the card covers the stage and the side panel; Esc restores ---------- */
 .artboard.has-max::before { content: ''; position: fixed; inset: 0; z-index: 19; background: var(--c-scrim-bg); }

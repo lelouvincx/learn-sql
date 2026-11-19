@@ -1,6 +1,6 @@
 import { initDb, runQuery, parseQuery, splitCondition, idsFor } from './db.js';
 import { createScene } from './scene.js';
-import { STARTER, CHALLENGE_STARTER, CHALLENGES, LESSONS, FIELDS, PETS, SET_PALS, SCHEMA } from './data.js';
+import { STARTER, CHALLENGE_STARTER, CHALLENGES, LESSONS, NEXT_TRACK, FIELDS, PETS, SET_PALS, SCHEMA } from './data.js';
 
 const $ = (sel) => document.querySelector(sel);
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -255,7 +255,7 @@ function renderProgress() {
   $('#lesson-list').innerHTML = LESSONS.map(
     (l) => `<li class="${l.ready ? 'is-active' : 'is-soon'}${l.ready && done ? ' is-done' : ''}">
       <button ${l.ready ? '' : 'disabled'}><b>${l.n}. ${l.title}</b><small>${l.topic}</small></button></li>`,
-  ).join('');
+  ).join('') + `<li class="is-soon is-next"><button disabled title="Next track: coming soon"><b>${NEXT_TRACK.title}</b><small>Coming soon</small></button></li>`;
   const now = LESSONS.find((l) => l.ready);
   $('#lessons-now').textContent = `${now.n} of ${LESSONS.length} · ${now.title}`;
 }
