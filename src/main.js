@@ -1,6 +1,7 @@
-import { initDb, runQuery, parseQuery, splitCondition, idsFor } from './db.js';
+import { initDb, runQuery, parseQuery, resultOf, sameRows } from './db.js';
 import { createScene } from './scene.js';
-import { STARTER, CHALLENGE_STARTER, CHALLENGES, LESSONS, NEXT_TRACK, FIELDS, PETS, SET_PALS, SCHEMA } from './data.js';
+import { mountErd } from './erd.js';
+import { LESSONS, NEXT_TRACK } from './lessons/index.js';
 
 const $ = (sel) => document.querySelector(sel);
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -10,10 +11,35 @@ const hlEl = $('#hl');
 const gutterEl = $('#gutter');
 const consoleEl = $('#console');
 
-const state = { tab: 'overview', mode: 'explore', step: 0, solved: new Set(), verdict: null };
+// ?lesson=N opens lesson N; solved challenges are kept per lesson in localStorage.
+const lessonParam = Number(new URLSearchParams(location.search).get('lesson'));
+const SOLVED_KEY = 'learn-sql:solved';
+const loadSolved = () => {
+  try {
+    return JSON.parse(localStorage.getItem(SOLVED_KEY)) ?? {};
+  } catch {
+    return {};
+  }
+};
+const saved = loadSolved();
+const state = {
+  lesson: LESSONS.find((l) => l.n === lessonParam) ?? LESSONS[0],
+  tab: 'overview',
+  mode: 'explore',
+  step: 0,
+  solved: saved,
+  verdict: null,
+};
+const solvedHere = () => new Set(state.solved[state.lesson.n] ?? []);
+const isDone = (l) => l.challenges.length > 0 && (state.solved[l.n] ?? []).length >= l.challenges.length;
+function markSolved(step) {
+  const set = solvedHere().add(step);
+  state.solved[state.lesson.n] = [...set].sort();
+  localStorage.setItem(SOLVED_KEY, JSON.stringify(state.solved));
+}
 
 // ---------- editor ----------
-const KEYWORDS = new Set(['select', 'from', 'where', 'and', 'or', 'not', 'order', 'by', 'limit', 'asc', 'desc', 'like', 'in', 'is', 'null', 'between', 'as', 'distinct', 'count']);
+const KEYWORDS = new Set(['select', 'from', 'where', 'and', 'or', 'not', 'order', 'by', 'limit', 'asc', 'desc', 'like', 'in', 'is', 'null', 'between', 'as', 'distinct', 'count', 'join', 'left', 'inner', 'outer', 'cross', 'on', 'group', 'having', 'union', 'all', 'intersect', 'except', 'offset', 'with', 'sum', 'avg', 'min', 'max', 'coalesce', 'case', 'when', 'then', 'else', 'end']);
 
 function highlight(code) {
   const re = /(--.*$)|('(?:[^']|'')*'?)|(\b\d+(?:\.\d+)?\b)|(\b[a-z_]+\b)|(<=|>=|<>|!=|[=<>*])/gim;
@@ -33,44 +59,9 @@ function highlight(code) {
   return out + esc(code.slice(last)) + '\n';
 }
 
-// The query written as a set: { p ∈ pets | A ∧ B }, plus the same thing in
-// terms of the coloured sets A, B, C… lit on the table.
-function renderFormula(parsed) {
-  const el = $('#formula');
-  if (!parsed) {
-    el.innerHTML = '<span class="card">Write a <code>SELECT … FROM … WHERE …</code> query to see it as a set.</span>';
-    return;
-  }
-  const table = esc(parsed.table);
-  if (!parsed.where) {
-    el.innerHTML = `{ p ∈ <b>${table}</b> }<span class="card">no condition: the result is the whole set</span>`;
-    return;
-  }
-  const { parts, ops } = splitCondition(parsed.where);
-  const sym = { AND: ' ∧ ', OR: ' ∨ ' };
-  const setSym = { AND: ' ∩ ', OR: ' ∪ ' };
-  const name = (i) => String.fromCharCode(65 + i);
-  const cond = parts
-    .map((p, i) => {
-      const not = p.match(/^not\s+([\s\S]+)$/i);
-      const text = not ? `¬(${esc(not[1])})` : esc(p);
-      return `${i ? sym[ops[i - 1]] : ''}<span class="set-chip set-${(i % SET_PALS.length) + 1}">${text}</span>`;
-    })
-    .join('');
-  // AND binds tighter than OR, so when both appear, bracket each run of ∩.
-  const mixed = ops.includes('AND') && ops.includes('OR');
-  const sets = parts
-    .map((p, i) => {
-      const not = /^not\s/i.test(p);
-      const n = `<b class="set-chip set-${(i % SET_PALS.length) + 1}">${name(i)}${not ? '′' : ''}</b>`;
-      const open = mixed && ops[i] === 'AND' && ops[i - 1] !== 'AND' ? '(' : '';
-      const close = mixed && ops[i - 1] === 'AND' && ops[i] !== 'AND' ? ')' : '';
-      return `${i ? setSym[ops[i - 1]] : ''}${open}${n}${close}`;
-    })
-    .join('');
-  el.innerHTML = `{ p ∈ <b>${table}</b> | ${cond} }<span class="card">= ${sets}${
-    parts.length > 1 ? '' : ' (one subset of pets)'
-  }</span>`;
+// The query written as a set, in the lesson's own notation.
+function renderFormula(code) {
+  $('#formula').innerHTML = state.lesson.formula(code, parseQuery(code));
 }
 
 let scene;
@@ -79,7 +70,7 @@ function syncEditor() {
   hlEl.innerHTML = highlight(code);
   const lines = code.split('\n').length;
   gutterEl.innerHTML = Array.from({ length: Math.max(lines, 3) }, (_, i) => i + 1).join('<br>');
-  renderFormula(parseQuery(code));
+  renderFormula(code);
 }
 
 function setCode(code) {
@@ -115,11 +106,9 @@ function renderResult(result) {
     .join('')}</tbody></table>`;
 }
 
-const sameSet = (a, b) => a.size === b.size && [...a].every((x) => b.has(x));
-
 let runToken = 0;
 async function run() {
-  const result = runQuery(sqlEl.value);
+  const result = runQuery(sqlEl.value, state.lesson.analyze);
   // A new run cancels the previous animation; only the latest run reports.
   const token = ++runToken;
   consoleEl.dataset.state = 'running';
@@ -131,16 +120,17 @@ async function run() {
   }
   renderResult(result);
   if (state.mode === 'challenge') {
-    const ok = !!result.passIds && sameSet(result.passIds, idsFor(CHALLENGES[state.step].expected));
+    const c = state.lesson.challenges[state.step];
+    const ok = !result.error && sameRows(result, resultOf(c.answer), !!c.ordered);
     state.verdict = ok ? 'ok' : 'no';
-    if (ok) state.solved.add(state.step);
+    if (ok) markSolved(state.step);
     renderProgress();
     renderTab();
   }
 }
 
 function resetRun() {
-  setCode(state.mode === 'challenge' ? CHALLENGE_STARTER : STARTER);
+  setCode(state.mode === 'challenge' ? state.lesson.challengeStarter : state.lesson.starter);
   runToken++;
   scene?.reset();
   consoleEl.dataset.state = 'idle';
@@ -149,6 +139,22 @@ function resetRun() {
 }
 
 $('#btn-run').addEventListener('click', run);
+
+// The query card minimizes to its title row; the choice is kept.
+const setCard = $('.set-card');
+const setMinBtn = $('#set-min');
+const MIN_ICON = '<svg viewBox="0 0 24 24"><path d="M5 12h14" /></svg>';
+const RESTORE_CARD_ICON = '<svg viewBox="0 0 24 24"><path d="m6 15 6-6 6 6" /></svg>';
+function setCardMin(min) {
+  setCard.classList.toggle('is-min', min);
+  setMinBtn.setAttribute('aria-expanded', String(!min));
+  setMinBtn.title = min ? 'Show the query card' : 'Minimize';
+  setMinBtn.setAttribute('aria-label', min ? 'Show the query card' : 'Minimize the query card');
+  setMinBtn.innerHTML = min ? RESTORE_CARD_ICON : MIN_ICON;
+  localStorage.setItem('learn-sql:set-card-min', min ? '1' : '');
+}
+setCardMin(localStorage.getItem('learn-sql:set-card-min') === '1');
+setMinBtn.addEventListener('click', () => setCardMin(!setCard.classList.contains('is-min')));
 $('#btn-reset').addEventListener('click', resetRun);
 $('#btn-shuffle').addEventListener('click', () => scene?.shuffle());
 $('#btn-view').addEventListener('click', () => scene?.resetView());
@@ -166,64 +172,76 @@ shapeBtns.forEach((b) => b.addEventListener('click', () => setShape(b.dataset.sh
 const startShape = new URLSearchParams(location.search).get('shape') === 'card' ? 'card' : 'bar';
 shapeBtns.forEach((b) => b.setAttribute('aria-checked', String(b.dataset.shape === startShape)));
 
+// 3D or 2D: the same grid, seen from the corner or straight down. ?view=2d opens flat.
+const viewBtns = [...document.querySelectorAll('[data-view]')];
+function setView(next) {
+  viewBtns.forEach((b) => b.setAttribute('aria-checked', String(b.dataset.view === next)));
+  scene?.setView(next);
+  const url = new URL(location.href);
+  url.searchParams.set('view', next);
+  history.replaceState(null, '', url);
+}
+viewBtns.forEach((b) => b.addEventListener('click', () => setView(b.dataset.view)));
+const startView = new URLSearchParams(location.search).get('view') === '2d' ? '2d' : '3d';
+viewBtns.forEach((b) => b.setAttribute('aria-checked', String(b.dataset.view === startView)));
+
 // ---------- info tabs ----------
 const TABS = {
-  overview: () => `
-    <h3>Sets &amp; subsets</h3>
-    <p>A table is a <b>set</b> of rows: 12 rows lying loosely in the <b>pets</b> region of the grid. Where a row lies means nothing: there is no first row and no last row. Press <b>Shuffle</b>: the rows move, but it’s the same table.</p>
-    <p>A query doesn’t walk the rows one by one. Each condition in <code>WHERE</code> lights the field it reads on <b>every</b> row at once, and every matching row gets a coloured plate under it. The result is a new set, the <b>subset</b> that passes.</p>
-    <ul class="facts">
-      <li><span class="ic">AND</span><span>Keep rows lying on <b>both</b> plates: the intersection ∩</span></li>
-      <li><span class="ic">OR</span><span>Keep rows lying on <b>either</b> plate: the union ∪</span></li>
-      <li><span class="ic">NOT</span><span>Keep every row the condition <b>misses</b>: the complement</span></li>
-    </ul>`,
-  sets: () => `
-    <h3>SQL as set notation</h3>
-    <p>Every <code>WHERE</code> query is a set written in a different alphabet:</p>
-    <table class="mapping"><thead><tr><th>SQL</th><th>Means</th><th>Set notation</th></tr></thead><tbody>
-      <tr><td>FROM pets</td><td>Start from the whole set</td><td>pets</td></tr>
-      <tr><td>WHERE a</td><td>The subset where a holds</td><td>{ p ∈ pets | a }</td></tr>
-      <tr><td>a AND b</td><td>In both</td><td>A ∩ B</td></tr>
-      <tr><td>a OR b</td><td>In at least one</td><td>A ∪ B</td></tr>
-      <tr><td>NOT a</td><td>Everything else</td><td>A′ = pets − A</td></tr>
-    </tbody></table>
-    <p><code>AND</code> is applied before <code>OR</code>, just as × comes before +. Use parentheses when you mean otherwise.</p>`,
-  fields: () => `
-    <h3>The pets set</h3>
-    <p>${PETS.length} rows. Every row has the same four fields, whether you draw it as a bar or a card.</p>
-    <table class="schema"><thead><tr><th>Field</th><th>Type</th><th>Example</th></tr></thead><tbody>
-    ${FIELDS.map((f, i) => `<tr><td>${f}</td><td>${typeof PETS[0][i] === 'number' ? 'number' : 'text'}</td><td>${esc(PETS[0][i])}</td></tr>`).join('')}
-    </tbody></table>`,
+  overview: () => state.lesson.overview(),
+  sets: () => state.lesson.notation(),
   challenge: () => {
-    const c = CHALLENGES[state.step];
-    const steps = CHALLENGES.map(
-      (ch, i) =>
-        `<li class="${i === state.step && state.mode === 'challenge' ? 'is-current' : ''} ${state.solved.has(i) ? 'is-done' : ''}"><button data-step="${i}">${i + 1}. ${ch.title}</button></li>`,
-    ).join('');
+    const list = state.lesson.challenges;
+    const c = list[state.step];
+    const solved = solvedHere();
+    const steps = list
+      .map(
+        (ch, i) =>
+          `<li class="${i === state.step && state.mode === 'challenge' ? 'is-current' : ''} ${solved.has(i) ? 'is-done' : ''}"><button data-step="${i}">${i + 1}. ${ch.title}</button></li>`,
+      )
+      .join('');
     if (state.mode !== 'challenge') {
       return `<h3>Challenges</h3><ol class="steps">${steps}</ol>
-        <p>Three questions, one per set operation. Your query passes when it returns exactly the right set of pets, in any order.</p>
+        <p>${list.length} questions on this lesson. Your query passes when it returns exactly the right rows${list.some((ch) => ch.ordered) ? ' (in order, where the question asks for one)' : ', in any order'}.</p>
         <button class="btn" id="start-challenge">Start challenges</button>`;
     }
+    const next = state.step < list.length - 1;
+    const nextLesson = LESSONS[LESSONS.indexOf(state.lesson) + 1];
     return `<h3>${c.title}</h3><ol class="steps">${steps}</ol>
       <p>${c.prompt}</p>
       ${state.verdict === 'no' ? `<p><small>Hint: ${c.hint}</small></p>` : ''}
-      ${state.verdict === 'ok' ? `<div class="verdict ok">Correct: that’s exactly the right set.${state.step < CHALLENGES.length - 1 ? ' <button class="btn" id="next-step">Next</button>' : ' Lesson complete.'}</div>` : ''}
-      ${state.verdict === 'no' ? '<div class="verdict no">Not the same set. Compare which rows got the right plates with the ones the question asks for.</div>' : ''}
+      ${
+        state.verdict === 'ok'
+          ? `<div class="verdict ok">Correct: that’s exactly the right ${c.ordered ? 'sequence' : 'set'}.${
+              next ? ' <button class="btn" id="next-step">Next</button>' : nextLesson ? ` Lesson complete. <button class="btn" id="next-lesson">Lesson ${nextLesson.n}</button>` : ' Course complete.'
+            }</div>`
+          : ''
+      }
+      ${state.verdict === 'no' ? `<div class="verdict no">${c.wrong ?? 'Not the same set. Compare your result with the rows the question asks for.'}</div>` : ''}
       <p class="actions"><button class="btn ghost" id="back-explore">Back to the example</button></p>`;
   },
 };
 
 function renderTab() {
-  const allDone = state.solved.size === CHALLENGES.length;
+  const allDone = isDone(state.lesson);
   document.querySelectorAll('.tabs button').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.tab === state.tab);
     if (b.dataset.tab === 'challenge') b.innerHTML = `Challenges${allDone ? ' ✓' : '<span class="dot"></span>'}`;
   });
+  // the schema canvas keeps its state between visits, so it is shown and hidden, never re-rendered
+  const schema = state.tab === 'schema';
+  $('#info-body').hidden = schema;
+  $('#schema-panel').hidden = !schema;
+  if (schema && !erd) {
+    erd = mountErd($('#erd'), $('#erd-tip'));
+    $('#erd-fit').addEventListener('click', erd.fit);
+    $('#erd-fit').addEventListener('dblclick', erd.relayout);
+  }
+  if (schema) return;
   $('#info-body').innerHTML = TABS[state.tab]();
   $('#start-challenge')?.addEventListener('click', () => setMode('challenge', 0));
   $('#back-explore')?.addEventListener('click', () => setMode('explore'));
   $('#next-step')?.addEventListener('click', () => setMode('challenge', state.step + 1));
+  $('#next-lesson')?.addEventListener('click', () => setLesson(LESSONS[LESSONS.indexOf(state.lesson) + 1].n));
   document.querySelectorAll('[data-step]').forEach((b) => b.addEventListener('click', () => setMode('challenge', Number(b.dataset.step))));
 }
 
@@ -231,7 +249,7 @@ function setMode(mode, step = state.step) {
   state.mode = mode;
   state.step = step;
   state.verdict = null;
-  $('#code-title').textContent = mode === 'challenge' ? `Challenge ${step + 1} of ${CHALLENGES.length}` : 'Try it yourself';
+  $('#code-title').textContent = mode === 'challenge' ? `Challenge ${step + 1} of ${state.lesson.challenges.length}` : 'Try it yourself';
   resetRun();
   renderTab();
   if (mode === 'challenge') {
@@ -249,15 +267,35 @@ document.querySelectorAll('.tabs button').forEach((b) =>
 
 // ---------- progress + lessons ----------
 function renderProgress() {
-  const done = state.solved.size === CHALLENGES.length ? 1 : 0;
+  const done = LESSONS.filter(isDone).length;
   $('#progress-count').textContent = `${done}/${LESSONS.length}`;
   $('#progress-fill').style.width = `${(done / LESSONS.length) * 100}%`;
+  const progress = $('#progress');
+  progress.title = `Basics: ${done} of ${LESSONS.length} lessons done`;
+  progress.setAttribute('aria-valuenow', String(done));
+  progress.setAttribute('aria-valuemax', String(LESSONS.length));
   $('#lesson-list').innerHTML = LESSONS.map(
-    (l) => `<li class="${l.ready ? 'is-active' : 'is-soon'}${l.ready && done ? ' is-done' : ''}">
-      <button ${l.ready ? '' : 'disabled'}><b>${l.n}. ${l.title}</b><small>${l.topic}</small></button></li>`,
+    (l) => `<li class="${l === state.lesson ? 'is-active' : ''}${isDone(l) ? ' is-done' : ''}">
+      <button data-lesson="${l.n}" ${l === state.lesson ? 'aria-current="true"' : ''}><b>${l.n}. ${l.title}</b><small>${l.topic}</small></button></li>`,
   ).join('') + `<li class="is-soon is-next"><button disabled title="Next track: coming soon"><b>${NEXT_TRACK.title}</b><small>Coming soon</small></button></li>`;
-  const now = LESSONS.find((l) => l.ready);
-  $('#lessons-now').textContent = `${now.n} of ${LESSONS.length} · ${now.title}`;
+  document.querySelectorAll('[data-lesson]').forEach((b) => b.addEventListener('click', () => setLesson(Number(b.dataset.lesson))));
+  $('#lessons-now').textContent = `${state.lesson.n} of ${LESSONS.length} · ${state.lesson.title}`;
+}
+
+// Open lesson n in place: its grid, its example query and its challenges.
+function setLesson(n) {
+  const next = LESSONS.find((l) => l.n === n);
+  if (!next || next === state.lesson) return openLessons(false);
+  state.lesson = next;
+  state.tab = 'overview';
+  const url = new URL(location.href);
+  url.searchParams.set('lesson', String(n));
+  history.replaceState(null, '', url);
+  document.title = `${next.title} · Learn SQL`;
+  scene?.load(next);
+  setMode('explore', 0);
+  renderProgress();
+  openLessons(false);
 }
 
 // ---------- lessons drawer: tucked away while you learn; hover or click the tab to open ----------
@@ -311,6 +349,67 @@ handle.addEventListener('keydown', (e) => {
 });
 addEventListener('resize', () => setRight(parseInt(getComputedStyle(artboard).getPropertyValue('--right'), 10), false));
 
+// ---------- drag handles between stacked boxes: lesson panel | editor, and editor | result set ----------
+// Dragging sets the first box's height as --split-h on `host` (with .has-split); arrows step 24px,
+// a double-click goes back to the default sizing. The height is saved under `key`.
+function splitter({ handle, host, first, key, clamp }) {
+  function set(h, save = true) {
+    if (h == null) {
+      host.classList.remove('has-split');
+      host.style.removeProperty('--split-h');
+      localStorage.removeItem(key);
+      return;
+    }
+    const v = Math.round(clamp(h));
+    host.style.setProperty('--split-h', `${v}px`);
+    host.classList.add('has-split');
+    handle.setAttribute('aria-valuenow', String(v));
+    if (save) localStorage.setItem(key, String(v));
+  }
+  if (Number(localStorage.getItem(key))) set(Number(localStorage.getItem(key)), false);
+  let from = 0;
+  handle.addEventListener('pointerdown', (e) => {
+    handle.setPointerCapture(e.pointerId);
+    from = first.offsetHeight - e.clientY;
+    artboard.classList.add('is-splitting');
+  });
+  handle.addEventListener('pointermove', (e) => handle.hasPointerCapture(e.pointerId) && set(from + e.clientY));
+  const end = () => artboard.classList.remove('is-splitting');
+  handle.addEventListener('pointerup', end);
+  handle.addEventListener('pointercancel', end);
+  handle.addEventListener('dblclick', () => set(null));
+  handle.addEventListener('keydown', (e) => {
+    const d = { ArrowUp: -24, ArrowDown: 24 }[e.key];
+    if (!d) return;
+    e.preventDefault();
+    set(first.offsetHeight + d);
+  });
+  addEventListener('resize', () => host.classList.contains('has-split') && set(first.offsetHeight, false));
+}
+const minH = (el) => parseInt(getComputedStyle(el).minHeight, 10) || 0;
+// the lesson panel: at least 150px; the editor card keeps its own min-height plus the gap
+const rightEl = $('.right');
+const infoEl = $('.info-card');
+splitter({
+  handle: $('#split-resize'),
+  host: rightEl,
+  first: infoEl,
+  key: 'learn-sql:info-h',
+  clamp: (h) => Math.min(Math.max(h, 150), Math.max(150, rightEl.clientHeight - minH($('.code-card')) - 12)),
+});
+// the editor: at least its min-height; the result set keeps its min-height, so the two share the rest
+const editorEl = $('.editor');
+splitter({
+  handle: $('#console-resize'),
+  host: $('.code-card'),
+  first: editorEl,
+  key: 'learn-sql:editor-h',
+  clamp: (h) => {
+    const lo = minH(editorEl);
+    return Math.min(Math.max(h, lo), Math.max(lo, editorEl.offsetHeight + consoleEl.offsetHeight - minH(consoleEl)));
+  },
+});
+
 // ---------- maximize the lesson panel or the editor ----------
 const EXPAND_ICON = '<svg viewBox="0 0 24 24"><path d="M3 8V3h5M16 3h5v5M21 16v5h-5M8 21H3v-5" /></svg>';
 const RESTORE_ICON = '<svg viewBox="0 0 24 24"><path d="M8 3v5H3M21 8h-5V3M16 21v-5h5M3 16h5v5" /></svg>';
@@ -333,24 +432,21 @@ addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && document.querySelector('.is-max')) setMax(null);
 });
 
-// ---------- schema: one ERD box per table, always in view above the editor ----------
-const KEY_ICON = '<svg viewBox="0 0 16 16" aria-label="primary key"><circle cx="5" cy="8" r="3.2" /><path d="M8.2 8H15M12.5 8v2.6M14.6 8v2" /></svg>';
-$('#erd').innerHTML = SCHEMA.map(
-  (t) => `<div class="erd-table">
-    <div class="erd-head"><b>${t.name}</b><span>${t.rows} rows</span></div>
-    <ul>${t.cols.map((c) => `<li class="${c.pk ? 'is-pk' : ''}"><i>${c.pk ? KEY_ICON : ''}</i><b>${c.name}</b><span>${c.type.toLowerCase()}</span></li>`).join('')}</ul>
-  </div>`,
-).join('') + '<p class="erd-note">Each row on the grid is one row of <b>pets</b>, with these four fields. Write your <code>WHERE</code> against these names.</p>';
+// ---------- schema: a node canvas of every table, its keys and the edges between them ----------
+// mounted the first time the Schema tab opens, when its tables have a size to lay out
+let erd = null;
 
 // ---------- boot ----------
 await initDb();
 try {
-  scene = createScene({ svg: $('#fig'), tipEl: $('#tip'), legendEl: $('#legend'), shape: startShape });
+  scene = createScene({ svg: $('#fig'), tipEl: $('#tip'), legendEl: $('#legend'), shape: startShape, view: startView });
+  scene.load(state.lesson);
 } catch {
   const note = $('#stage-note');
   note.hidden = false;
   note.innerHTML = '<b>Figure unavailable</b>The drawing engine failed to load. The query editor and result set still work.';
 }
-setCode(STARTER);
+document.title = `${state.lesson.title} · Learn SQL`;
+setCode(state.lesson.starter);
 renderTab();
 renderProgress();

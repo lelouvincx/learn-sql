@@ -243,7 +243,8 @@ spacing:
 
 A fixed dashboard on one screen, with no page scroll:
 
-- A **rail** (72px) on the left holds the section icons.
+- A **rail** (72px) on the left holds the section icons at its top edge, then the lesson progress:
+  a short bar and the count.
 - The **stage** fills the rest of the width up to the side panel. It holds the 3D grid, the set
   card at its bottom left and the grid toolbar at its bottom right.
 - The **side panel** (470px by default, resizable by dragging the gap) stacks the lesson panel,
@@ -304,8 +305,9 @@ The `@google/design.md` schema has no motion tokens yet, so these durations live
 Plain, short and literal. Say what the learner sees on the grid ("every row is checked at the same
 moment"), not what the database does internally. Use the set words (set, subset, union,
 intersection, complement, ∅) alongside the SQL words, never instead of them. Labels are nouns in
-capitals ("RESULT SET", "SCHEMA"); buttons are verbs or nouns in sentence case ("Shuffle",
-"Front view"). Errors explain the fix in one sentence. Unbuilt features say "Soon".
+capitals ("RESULT SET", "SCHEMA"); buttons are verbs or nouns in sentence case ("Start
+challenges"). Grid toolbar actions (3D or 2D, back to the starting view, run, shuffle) are icons only,
+named in their tooltip and accessible label. Errors explain the fix in one sentence. Unbuilt features say "Soon".
 
 ## Components
 

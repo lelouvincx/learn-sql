@@ -4,6 +4,7 @@
 
 ### Changed
 
+- Stage every lesson as separate boards with a WITH rewrite on the query card, add a 3D/2D toggle, a Schema tab with a draggable table diagram and resizable panels, and fit every figure label inside its board. [#5](https://github.com/lelouvincx/learn-sql/pull/5)
 - Deploy every main push to Cloudflare through GitHub Actions after checks pass, with queued production runs. [#4](https://github.com/lelouvincx/learn-sql/pull/4)
 - Add PRODUCT.md to the product.md standard, published at /product.md, and recompose the curriculum into seven beginner lessons with Dimensional modeling as a coming-soon next track. [#3](https://github.com/lelouvincx/learn-sql/pull/3)
 - License the project under MIT, copyright Chinh Dinh. [#2](https://github.com/lelouvincx/learn-sql/pull/2)

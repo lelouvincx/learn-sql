@@ -27,20 +27,20 @@ code {
 }
 
 /* ---------- cards: surface fill, ink outline, hard offset shadow ---------- */
-.status, .info-card, .code-card, .schema-card, .set-card, .stage-note {
+.info-card, .code-card, .set-card, .stage-note {
   background: var(--c-card-bg); color: var(--c-card-fg);
   border: var(--spacing-stroke) solid var(--color-primary); border-radius: var(--c-card-radius);
   box-shadow: var(--spacing-offset-md) var(--spacing-offset-md) 0 var(--color-primary);
 }
-.info-body h3, .code-card h2, .schema-card h2 {
+.info-body h3, .code-card h2 {
   margin: 0; text-transform: uppercase; color: var(--c-card-title-fg);
   font: var(--c-card-title-type); letter-spacing: var(--c-card-title-tracking);
 }
-.set-kicker, .progress-label, .progress-count, .lessons h2 {
+.set-kicker, .progress-count, .lessons h2 {
   text-transform: uppercase; color: var(--c-kicker-fg);
   font: var(--c-kicker-type); letter-spacing: var(--c-kicker-tracking);
 }
-.progress-label, .progress-count, .lessons h2 { color: var(--color-primary); }
+.progress-count, .lessons h2 { color: var(--color-primary); }
 
 /* ---------- buttons ---------- */
 .btn, .shuffle {
@@ -53,6 +53,7 @@ code {
 .btn.ghost:hover, .shuffle:hover { background: var(--c-button-hover-bg); color: var(--c-button-hover-fg); }
 .btn:not(.ghost) { background: var(--c-button-primary-bg); color: var(--c-button-primary-fg); }
 .shuffle svg { width: 18px; height: 18px; }
+.shuffle.icon { width: var(--c-button-height); padding: 0; justify-content: center; }
 .btn-ghost, .btn-run {
   width: var(--c-button-icon-width); height: var(--c-button-icon-height); display: grid; place-items: center;
   border: var(--spacing-stroke) solid var(--color-primary); border-radius: var(--c-button-icon-radius);
@@ -73,7 +74,7 @@ code {
 /* ---------- rail ---------- */
 .sidebar {
   position: absolute; left: 0; top: 0; bottom: 0; width: var(--spacing-rail);
-  border-right: var(--spacing-hairline) solid var(--c-divider-bg); padding-top: var(--spacing-header);
+  border-right: var(--spacing-hairline) solid var(--c-divider-bg); padding-top: var(--spacing-xl);
 }
 .sidebar ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--spacing-2xl); justify-items: center; }
 .sidebar a {
@@ -100,15 +101,13 @@ code {
 .brand-rule { width: 1px; height: 30px; background: var(--c-divider-bg); }
 .brand h1 { margin: 0; text-transform: uppercase; font: var(--c-brand-type); letter-spacing: var(--c-brand-tracking); }
 
-.status {
-  position: absolute; right: var(--spacing-xl); top: var(--spacing-xl); width: 260px;
-  display: flex; align-items: center; gap: var(--spacing-lg); padding: var(--spacing-md) var(--spacing-lg);
+/* lesson progress, under the rail icons: a short bar and the count */
+.rail-progress {
+  display: grid; justify-items: center; gap: var(--spacing-xs); color: var(--color-primary);
+  margin: var(--spacing-xl) var(--spacing-md) 0; padding-top: var(--spacing-lg); border-top: var(--spacing-hairline) solid var(--c-divider-bg);
 }
-.progress-icon { width: 34px; height: 34px; flex: none; }
-.status > div { flex: 1; }
-.progress-row { display: flex; align-items: center; gap: var(--spacing-md); }
 .progress-track {
-  flex: 1; height: var(--c-progress-track-height); overflow: hidden; background: var(--c-progress-track-bg);
+  width: 44px; height: var(--c-progress-track-height); overflow: hidden; background: var(--c-progress-track-bg);
   border: var(--spacing-hairline) solid var(--color-primary); border-radius: var(--c-progress-track-radius);
 }
 .progress-fill { display: block; height: 100%; width: 0; background: var(--c-progress-fill-bg); transition: width .6s; }
@@ -138,7 +137,14 @@ code {
 
 /* the set card sits flat in the stage */
 .set-card { position: absolute; left: var(--spacing-xl); bottom: 0; width: 430px; padding: var(--spacing-md) var(--spacing-lg); box-shadow: none; }
+/* the kicker and the minimize button share the top row; minimized, only that row is left */
+.set-head { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-md); }
+.set-min { flex: none; width: var(--c-button-height); height: var(--c-button-height); margin: calc(-1 * var(--spacing-xs)) calc(-1 * var(--spacing-sm)) calc(-1 * var(--spacing-xs)) 0; }
+.set-min svg { width: 15px; height: 15px; }
+.set-card.is-min { width: auto; }
+.set-card.is-min .formula, .set-card.is-min .legend { display: none; }
 .formula { margin: var(--spacing-xs) 0 0; color: var(--c-editor-fg); font: var(--c-editor-type); letter-spacing: var(--c-editor-tracking); }
+.formula .cte { display: block; white-space: pre-wrap; font: var(--c-caption-type); letter-spacing: var(--c-caption-tracking); }
 .formula .card { display: block; color: var(--c-note-fg); font: var(--c-note-type); letter-spacing: var(--c-note-tracking); }
 .legend { display: grid; gap: var(--spacing-xs); margin-top: var(--spacing-sm); }
 .legend:empty { display: none; }
@@ -177,8 +183,10 @@ code {
   .set-card { bottom: calc(var(--c-button-height) + var(--spacing-sm)); }
 }
 
-/* grid toolbar: row shape, view, shuffle, all one height */
+/* grid toolbar: row shape, 3D or 2D, reset view, run, shuffle, all one height */
 .stage-tools { position: absolute; right: var(--spacing-xl); bottom: 0; display: flex; align-items: center; gap: var(--spacing-sm); }
+/* Run sits in the toolbar at the toolbar's height, still the one filled button */
+.stage-tools .btn-run { width: var(--c-button-height); height: var(--c-button-height); border-radius: var(--rounded-full); }
 .shape-switch {
   display: flex; align-items: center; gap: var(--spacing-xs); height: var(--c-segmented-height); padding: var(--spacing-2xs);
   background: var(--c-segmented-bg); border: var(--spacing-stroke) solid var(--color-primary); border-radius: var(--c-segmented-radius);
@@ -219,6 +227,25 @@ code {
 .is-resizing, .is-resizing * { cursor: col-resize !important; user-select: none; }
 
 .info-card { display: flex; flex-direction: column; flex: 0 1 auto; min-height: 150px; max-height: 38%; }
+/* once dragged, the lesson panel keeps the height you gave it; the editor takes the rest */
+.right.has-split .info-card { flex: 0 0 var(--split-h); max-height: none; }
+/* the same for the editor inside the editor card; the result set takes the rest */
+.code-card.has-split .editor { flex: 0 0 var(--split-h); overflow: auto; }
+/* drag handle in the gap between the lesson panel and the editor; it takes no room of its own */
+.split-resize {
+  position: relative; flex: none; height: var(--spacing-md); margin: calc(-1 * var(--spacing-md)) 0;
+  cursor: row-resize; touch-action: none; border-radius: var(--rounded-sm); z-index: 2;
+}
+.split-resize::after {
+  content: ''; position: absolute; top: var(--spacing-xs); left: 50%; width: 44px; height: 4px; translate: -50% 0;
+  border-radius: var(--rounded-full); background: var(--c-divider-bg); transition: background .15s, width .15s;
+}
+.split-resize:hover::after, .split-resize:focus-visible::after, .is-splitting .split-resize::after { background: var(--color-primary); width: 72px; }
+.split-resize:focus-visible { outline: none; }
+/* inside the editor card the gap is sm, not md */
+.code-card .split-resize { height: var(--spacing-sm); margin: calc(-1 * var(--spacing-sm)) 0; }
+.code-card .split-resize::after { top: var(--spacing-2xs); }
+.is-splitting, .is-splitting * { cursor: row-resize !important; user-select: none; }
 .info-head { display: flex; align-items: center; gap: var(--spacing-sm); padding-right: var(--spacing-md); border-bottom: var(--spacing-hairline) solid var(--c-divider-bg); }
 .tabs { display: flex; flex: 1; min-width: 0; gap: var(--spacing-xs); padding: var(--spacing-md) var(--spacing-lg); }
 .tabs button {
@@ -269,17 +296,34 @@ code {
 .verdict.ok { background: var(--c-verdict-ok-bg); color: var(--c-verdict-ok-fg); }
 .verdict.no { background: var(--c-alert-bg); color: var(--c-alert-fg); }
 
-/* schema: the ERD stays in view between the lesson panel and the editor */
-.schema-card { flex: 0 0 auto; padding: var(--spacing-sm) var(--spacing-md) var(--spacing-md); display: flex; flex-direction: column; gap: var(--spacing-sm); }
-.schema-card header { display: flex; align-items: center; justify-content: space-between; padding-left: var(--spacing-xs); }
-.schema-key { display: flex; align-items: center; gap: var(--spacing-xs); color: var(--c-caption-fg); font: var(--c-caption-type); letter-spacing: var(--c-caption-tracking); }
+/* schema tab: a small node canvas in the lesson panel. Tables are cards you drag; the paper
+   pans and zooms; an ink edge runs from each foreign key to the key it points at. */
+.info-card { position: relative; }
+.schema-panel { display: flex; flex-direction: column; gap: var(--spacing-sm); padding: var(--spacing-md) var(--spacing-lg) var(--spacing-lg); min-height: 0; flex: 1; }
+.schema-panel[hidden] { display: none; }
+.schema-tools { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-sm); }
+.schema-tools .btn-ghost { flex: none; width: var(--c-button-height); height: var(--c-button-height); }
+.schema-tools .btn-ghost svg { width: 15px; height: 15px; }
+.schema-key { display: flex; align-items: center; gap: var(--spacing-xs); margin-right: var(--spacing-xs); color: var(--c-caption-fg); font: var(--c-caption-type); letter-spacing: var(--c-caption-tracking); }
 .schema-key svg, .erd-table i svg { width: 13px; height: 13px; fill: none; stroke: var(--color-primary); stroke-width: 1.5; stroke-linecap: round; }
-.erd { display: flex; gap: var(--spacing-lg); align-items: flex-start; padding: 0 var(--spacing-xs) var(--spacing-2xs); }
-.erd-table {
-  flex: 0 0 var(--c-erd-table-width); overflow: hidden; background: var(--c-erd-table-bg); color: var(--c-erd-table-fg);
-  border: var(--spacing-stroke) solid var(--color-primary); border-radius: var(--c-erd-table-radius);
-  box-shadow: var(--spacing-offset-sm) var(--spacing-offset-sm) 0 var(--color-primary);
+.erd {
+  position: relative; flex: 1; min-height: 150px; height: 190px; overflow: hidden; cursor: grab; touch-action: none; user-select: none;
+  background-color: var(--c-editor-bg); background-image: radial-gradient(circle, var(--c-divider-bg) 1.1px, transparent 1.3px);
+  border: var(--spacing-hairline) solid var(--c-divider-bg); border-radius: var(--rounded-md);
 }
+.erd.is-panning, .erd.is-panning * { cursor: grabbing; }
+.erd-world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.erd-edges { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; color: var(--color-primary); }
+.erd-edge path { fill: none; stroke-width: 1.6; transition: stroke-width .15s; }
+.erd-edge.is-on path { stroke-width: 2.8; }
+.erd-table {
+  position: absolute; left: 0; top: 0; width: var(--c-erd-table-width); overflow: hidden; cursor: move;
+  background: var(--c-erd-table-bg); color: var(--c-erd-table-fg);
+  border: var(--spacing-stroke) solid var(--color-primary); border-radius: var(--c-erd-table-radius);
+  box-shadow: var(--spacing-offset-sm) var(--spacing-offset-sm) 0 var(--color-primary); transition: box-shadow .15s;
+}
+.erd-table.is-dragging { box-shadow: var(--spacing-offset-md) var(--spacing-offset-md) 0 var(--color-primary); }
+.erd-table:focus-visible { outline: var(--spacing-focus) solid var(--color-primary); outline-offset: var(--spacing-2xs); }
 .erd-head {
   display: flex; justify-content: space-between; align-items: baseline; padding: var(--spacing-xs) var(--spacing-md);
   background: var(--c-erd-head-bg); color: var(--c-erd-head-fg); border-bottom: var(--spacing-stroke) solid var(--color-primary);
@@ -289,15 +333,14 @@ code {
 .erd-table ul { list-style: none; margin: 0; padding: var(--spacing-2xs) 0; }
 .erd-table li {
   display: grid; grid-template-columns: 14px 1fr auto; gap: var(--spacing-sm); align-items: center; padding: var(--spacing-hairline) var(--spacing-md);
-  font: var(--c-erd-table-type); letter-spacing: var(--c-erd-table-tracking);
+  font: var(--c-erd-table-type); letter-spacing: var(--c-erd-table-tracking); transition: background .15s;
 }
 .erd-table li + li { border-top: var(--spacing-hairline) dashed var(--c-divider-bg); }
 .erd-table li b { font: var(--c-erd-table-type); letter-spacing: var(--c-erd-table-tracking); }
 .erd-table li.is-pk b { font: var(--c-erd-head-type); letter-spacing: var(--c-erd-head-tracking); }
 .erd-table li span { color: var(--c-caption-fg); }
+.erd-table li.is-linked { background: var(--color-highlight); }
 .erd-table i { display: grid; place-items: center; }
-.erd-note { margin: 0; color: var(--c-note-fg); font: var(--c-note-type); letter-spacing: var(--c-note-tracking); }
-.erd-note b { color: var(--color-primary); }
 
 /* editor + result */
 .code-card {
@@ -365,7 +408,6 @@ code {
 @media (max-height: 960px) {
   .code-card { min-height: 250px; }
   .console { min-height: 64px; }
-  .schema-card { padding: var(--spacing-sm) var(--spacing-md); gap: var(--spacing-xs); }
   .erd-table li, .erd-table li b { font: var(--type-data-sm); letter-spacing: var(--type-data-sm-tracking); }
   .erd-head { padding: var(--spacing-2xs) var(--spacing-md); }
 }
@@ -392,7 +434,7 @@ code {
 .lessons-tab svg { width: 14px; height: 14px; stroke: var(--color-primary); stroke-width: 2; transition: rotate .2s; }
 .lessons.is-open .lessons-tab svg { rotate: 180deg; }
 .lessons:not(.is-open) .lesson-list button { visibility: hidden; }
-.lesson-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(8, 1fr); gap: var(--spacing-sm); }
+.lesson-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(8, 1fr); gap: var(--spacing-sm); } /* 7 lessons and the next-track card */
 .lesson-list button {
   width: 100%; height: var(--c-lesson-card-height); padding: 0 var(--spacing-md); text-align: left;
   display: flex; flex-direction: column; justify-content: center; gap: var(--spacing-2xs);
@@ -417,4 +459,5 @@ code {
   width: auto; max-height: none; min-height: 0;
 }
 .info-card.is-max .info-body { padding: var(--spacing-xl) var(--spacing-2xl); max-width: 900px; font: var(--c-prose-lg-type); letter-spacing: var(--c-prose-lg-tracking); }
+.info-card.is-max .erd { height: auto; }
 .code-card.is-max .editor { font: var(--type-code-lg); letter-spacing: var(--type-code-lg-tracking); }

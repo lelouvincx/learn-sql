@@ -21,6 +21,10 @@
             <svg viewBox="0 0 32 32"><rect x="4.5" y="6.5" width="23" height="19" rx="1.5" /><path d="m13.5 11.6 7 4.4-7 4.4z" class="fill" /></svg>
           </a><span class="soon" aria-hidden="true">Soon</span></li>
         </ul>
+        <div class="rail-progress" id="progress" role="progressbar" aria-label="Basics progress" aria-valuemin="0" aria-valuemax="8" aria-valuenow="0">
+          <span class="progress-track"><span class="progress-fill" id="progress-fill"></span></span>
+          <span class="progress-count" id="progress-count">0/8</span>
+        </div>
       </nav>
 
       <header class="brand">
@@ -37,7 +41,12 @@
         <div class="tip" id="tip" role="tooltip"></div>
         <div class="stage-note" id="stage-note" hidden></div>
         <section class="set-card" aria-label="The query as a set">
-          <span class="set-kicker">Your query as a set</span>
+          <div class="set-head">
+            <span class="set-kicker">Your query as a set</span>
+            <button class="btn-ghost set-min" id="set-min" aria-expanded="true" aria-controls="formula legend" title="Minimize" aria-label="Minimize the query card">
+              <svg viewBox="0 0 24 24"><path d="M5 12h14" /></svg>
+            </button>
+          </div>
           <p class="formula" id="formula"></p>
           <div class="legend" id="legend"></div>
         </section>
@@ -49,24 +58,23 @@
             <button role="radio" data-shape="card" aria-checked="false" title="An index card with the fields as labelled lines">
               <svg viewBox="0 0 28 12" aria-hidden="true"><rect x="5" y=".8" width="18" height="10.4" rx="1" /><path d="M8 3.6h12M8 6h12M8 8.4h8" /></svg>Card</button>
           </div>
-          <button class="shuffle view" id="btn-view" title="Back to the starting view">Front view</button>
-          <button class="shuffle" id="btn-shuffle" title="Shuffle the rows">
+          <div class="shape-switch" role="radiogroup" aria-label="View the grid in">
+            <button role="radio" data-view="3d" aria-checked="true" title="3D view" aria-label="3D view">
+              <svg viewBox="0 0 28 12" aria-hidden="true"><path d="M14 1 24 4.6 14 8.2 4 4.6zM4 4.6v2.8l10 3.6 10-3.6V4.6M14 8.2V11" /></svg></button>
+            <button role="radio" data-view="2d" aria-checked="false" title="2D view, straight down" aria-label="2D view">
+              <svg viewBox="0 0 28 12" aria-hidden="true"><rect x="8" y="1" width="12" height="10" rx="1" /><path d="M8 6h12M14 1v10" /></svg></button>
+          </div>
+          <button class="shuffle icon" id="btn-view" title="Back to the starting view (or double-click the grid)" aria-label="Back to the starting view">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2" /><path d="M12 3v4M12 17v4M3 12h4M17 12h4" /></svg>
+          </button>
+          <button class="btn-run" id="btn-run" title="Run query (Ctrl+Enter)" aria-label="Run query">
+            <svg viewBox="0 0 24 24"><path d="M7.5 4.8v14.4L19 12z" class="fill" /></svg>
+          </button>
+          <button class="shuffle icon" id="btn-shuffle" title="Shuffle the rows" aria-label="Shuffle the rows">
             <svg viewBox="0 0 24 24"><path d="M3 7h3.5c4.5 0 6.5 10 11 10H21M3 17h3.5c1.8 0 3.1-1.6 4.3-3.6M13.2 9.6C14.4 8 15.7 7 17.5 7H21M18.5 4 21 7l-2.5 3M18.5 14l2.5 3-2.5 3" /></svg>
-            Shuffle
           </button>
         </div>
       </main>
-
-      <section class="status" aria-label="Progress">
-        <svg viewBox="0 0 40 40" class="progress-icon" aria-hidden="true"><path d="M20 10.6c-3.3-2.4-8.2-3.2-14-3v21.2c5.8-.2 10.7.6 14 3 3.3-2.4 8.2-3.2 14-3V7.6c-5.8-.2-10.7.6-14 3zM20 10.6v21.2" /></svg>
-        <div>
-          <span class="progress-label">Basics</span>
-          <div class="progress-row">
-            <span class="progress-track"><span class="progress-fill" id="progress-fill"></span></span>
-            <span class="progress-count" id="progress-count">0/8</span>
-          </div>
-        </div>
-      </section>
 
       <div class="right-resize" id="right-resize" role="separator" aria-orientation="vertical" aria-label="Resize the side panel" tabindex="0" title="Drag to resize · Double-click to reset"></div>
       <div class="right">
@@ -75,7 +83,7 @@
         <div class="tabs" role="tablist">
           <button role="tab" data-tab="overview" class="is-active">Overview</button>
           <button role="tab" data-tab="sets">Set notation</button>
-          <button role="tab" data-tab="fields">Table</button>
+          <button role="tab" data-tab="schema">Schema</button>
           <button role="tab" data-tab="challenge">Challenges</button>
         </div>
           <button class="btn-ghost btn-max" data-max="info" title="Maximize lesson panel (Esc to restore)" aria-label="Maximize lesson panel" aria-pressed="false">
@@ -83,15 +91,19 @@
           </button>
         </div>
         <div class="info-body" id="info-body" role="tabpanel"></div>
+        <div class="schema-panel" id="schema-panel" role="tabpanel" aria-label="Schema" hidden>
+          <div class="schema-tools">
+            <span class="schema-key"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="5" cy="8" r="3.2" /><path d="M8.2 8H15M12.5 8v2.6M14.6 8v2" /></svg>primary key · drag a table, drag the paper to pan, scroll to zoom</span>
+            <button class="btn-ghost" id="erd-fit" title="Fit the tables in view (double-click: tidy them back into a row)" aria-label="Fit the tables in view">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2" /><path d="M12 3v4M12 17v4M3 12h4M17 12h4" /></svg>
+            </button>
+          </div>
+          <div class="erd" id="erd" aria-label="Schema diagram"></div>
+          <div class="tip" id="erd-tip" role="tooltip"></div>
+        </div>
       </section>
 
-      <section class="schema-card" aria-label="Schema">
-        <header>
-          <h2>Schema</h2>
-          <span class="schema-key"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="5" cy="8" r="3.2" /><path d="M8.2 8H15M12.5 8v2.6M14.6 8v2" /></svg>primary key</span>
-        </header>
-        <div class="erd" id="erd"></div>
-      </section>
+      <div class="split-resize" id="split-resize" role="separator" aria-orientation="horizontal" aria-label="Resize the lesson panel and the editor" tabindex="0" title="Drag to resize · Double-click to reset"></div>
 
       <section class="code-card" data-max-id="code" aria-label="Try it yourself">
         <header>
@@ -103,9 +115,6 @@
             <button class="btn-ghost" id="btn-reset" title="Reset query" aria-label="Reset query">
               <svg viewBox="0 0 24 24"><path d="M4.5 10.5A8 8 0 1 1 6 17" /><path d="M4 5v5.8h5.8" /></svg>
             </button>
-            <button class="btn-run" id="btn-run" title="Run query (Ctrl+Enter)" aria-label="Run query">
-              <svg viewBox="0 0 24 24"><path d="M7.5 4.8v14.4L19 12z" class="fill" /></svg>
-            </button>
           </div>
         </header>
         <div class="editor">
@@ -115,6 +124,7 @@
             <textarea id="sql" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="SQL query"></textarea>
           </div>
         </div>
+        <div class="split-resize" id="console-resize" role="separator" aria-orientation="horizontal" aria-label="Resize the editor and the result set" tabindex="0" title="Drag to resize · Double-click to reset"></div>
         <div class="console" id="console" data-state="idle">
           <div class="console-head">
             <span class="console-dot"></span>
