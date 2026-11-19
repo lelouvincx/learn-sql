@@ -6,7 +6,7 @@
 //   3. fail if the stylesheet, the scripts or the page use a value that is not a token.
 //
 // Run it with `npm run design` (writes) or `npm run lint` (checks only).
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative } from 'node:path';
 import { lint } from '@google/design.md/linter';
@@ -151,7 +151,8 @@ style.walkRules((rule) => {
 });
 
 // scripts and the page: no literal colours outside the generated tokens and the vendored engine
-for (const f of ['src/main.js', 'src/scene.js', 'src/data.js', 'src/db.js', 'index.html']) {
+const LESSON_FILES = readdirSync(at('src/lessons')).filter((f) => f.endsWith('.js')).map((f) => `src/lessons/${f}`);
+for (const f of ['src/main.js', 'src/scene.js', 'src/data.js', 'src/db.js', 'src/erd.js', 'index.html', ...LESSON_FILES]) {
   read(f)
     .split('\n')
     .forEach((text, i) => {
@@ -167,7 +168,7 @@ for (const f of ['src/main.js', 'src/scene.js', 'src/data.js', 'src/db.js', 'ind
 
 // every component is used: by the stylesheet through its --c- properties, by the scripts by name,
 // or by the engine (see ENGINE_COMPONENTS above)
-const js = ['src/main.js', 'src/scene.js', 'src/data.js'].map(read).join('\n');
+const js = ['src/main.js', 'src/scene.js', 'src/data.js', 'src/erd.js', ...LESSON_FILES].map(read).join('\n');
 for (const name of Object.keys(components)) {
   const inCss = [...used].some((u) => u.startsWith(`c-${name}-`) && defined.has(u));
   const inJs = js.includes(`'${name}'`) || js.includes(`"${name}"`) || js.includes(`\`${name}\``);

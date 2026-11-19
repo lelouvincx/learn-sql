@@ -39,8 +39,10 @@ const camBasis = (yaw, pitch) => { const t = yaw*Math.PI/180, p = pitch*Math.PI/
 const CAM_B0 = camBasis(YAW0, PITCH0);
 // CAM_LIM: how far (deg) the camera may turn either side of the front view; null = all the way round (set per figure)
 let CAM_LIM = null;
+// PITCH_MAX: the steepest free-orbit pitch (deg); a figure may raise it to 90 for a straight-down plan view
+let PITCH_MAX = 78;
 function setCam(yaw, pitch){ YAW = CAM_LIM == null ? yaw : Math.max(YAW0 - CAM_LIM, Math.min(YAW0 + CAM_LIM, yaw));
-  PITCH = CAM_LIM == null ? Math.max(6, Math.min(78, pitch)) : Math.max(15, Math.min(62, pitch)); const b = camBasis(YAW, PITCH); CAM_R = b.R; CAM_U = b.U; CAM_V = b.V; CAM_D = CAM_U.map(v => -v); }
+  PITCH = CAM_LIM == null ? Math.max(6, Math.min(PITCH_MAX, pitch)) : Math.max(15, Math.min(62, pitch)); const b = camBasis(YAW, PITCH); CAM_R = b.R; CAM_U = b.U; CAM_V = b.V; CAM_D = CAM_U.map(v => -v); }
 setCam(YAW0, PITCH0);
 const camDot = (a,b) => a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
 const rotV = n => { const r = camDot(n,CAM_R), u = camDot(n,CAM_U), v = camDot(n,CAM_V); return [0,1,2].map(i => CAM_B0.R[i]*r + CAM_B0.U[i]*u + CAM_B0.V[i]*v); };

@@ -5,7 +5,7 @@ every row is a bar you can turn and shuffle, and every `WHERE` condition lights 
 on every row at once, so `AND`, `OR` and `NOT` show up as intersection, union and complement.
 
 Live at <https://learn-sql.lelouvincx.com>. [PRODUCT.md](PRODUCT.md) says who it is for and lists
-the seven-lesson curriculum; lesson 1, *Sets & subsets*, is built and the rest are stubs. The site
+the seven-lesson curriculum; all seven lessons are built. The site
 publishes the same file at `/product.md`.
 
 ## Run it

@@ -1,38 +1,55 @@
 import { component } from './tokens.js';
 
-// Lesson content and the one table on the grid.
+// The tables every lesson writes SQL against. The database, the ERD above the
+// editor and the rows on the grid are all built from SCHEMA, so they can't drift.
 
-export const FIELDS = ['id', 'name', 'species', 'age'];
-
+// pets.owner_id is NULL for the three strays; owner 5 (Eli) has no pets yet.
 export const PETS = [
-  [1, 'Miso', 'cat', 3],
-  [2, 'Biscuit', 'dog', 5],
-  [3, 'Luna', 'cat', 1],
-  [4, 'Pepper', 'rabbit', 2],
-  [5, 'Mochi', 'cat', 7],
-  [6, 'Rex', 'dog', 2],
-  [7, 'Nori', 'fish', 1],
-  [8, 'Tofu', 'cat', 4],
-  [9, 'Bean', 'dog', 1],
-  [10, 'Clover', 'rabbit', 6],
-  [11, 'Ziggy', 'fish', 3],
-  [12, 'Olive', 'cat', 2],
+  [1, 'Miso', 'cat', 3, 1],
+  [2, 'Biscuit', 'dog', 5, 2],
+  [3, 'Luna', 'cat', 1, 1],
+  [4, 'Pepper', 'rabbit', 2, 3],
+  [5, 'Mochi', 'cat', 7, 2],
+  [6, 'Rex', 'dog', 2, 4],
+  [7, 'Nori', 'fish', 1, null],
+  [8, 'Tofu', 'cat', 4, 3],
+  [9, 'Bean', 'dog', 1, 2],
+  [10, 'Clover', 'rabbit', 6, null],
+  [11, 'Ziggy', 'fish', 3, 4],
+  [12, 'Olive', 'cat', 2, null],
 ];
 
-// The tables the learner writes SQL against, drawn as an ERD above the editor.
-// The database is created from this too, so the diagram can't drift from it.
+export const OWNERS = [
+  [1, 'Ana', 'Hanoi'],
+  [2, 'Bao', 'Saigon'],
+  [3, 'Chi', 'Hanoi'],
+  [4, 'Duc', 'Da Nang'],
+  [5, 'Eli', 'Saigon'],
+];
+
 export const SCHEMA = [
   {
     name: 'pets',
-    rows: PETS.length,
+    data: PETS,
     cols: [
       { name: 'id', type: 'INTEGER', pk: true },
       { name: 'name', type: 'TEXT' },
       { name: 'species', type: 'TEXT' },
       { name: 'age', type: 'INTEGER' },
+      { name: 'owner_id', type: 'INTEGER', ref: 'owners' },
+    ],
+  },
+  {
+    name: 'owners',
+    data: OWNERS,
+    cols: [
+      { name: 'id', type: 'INTEGER', pk: true },
+      { name: 'name', type: 'TEXT' },
+      { name: 'city', type: 'TEXT' },
     ],
   },
 ];
+export const table = (name) => SCHEMA.find((t) => t.name === name);
 
 // One Colorfigures body family per condition in the WHERE clause: the
 // plate under a row is shaded light / mid / dark like any other solid.
@@ -44,46 +61,3 @@ export const SET_PALS = [
   { l: component['set-chip-4'].bg, m: component['set-plate-4-side'].bg, d: component['set-plate-4-shade'].bg },
 ];
 
-export const STARTER = `SELECT *
-FROM pets
-WHERE species = 'cat'
-  AND age < 3;`;
-
-export const CHALLENGE_STARTER = `SELECT *
-FROM pets
-WHERE `;
-
-export const CHALLENGES = [
-  {
-    title: 'Dogs and rabbits',
-    prompt: 'The groomer is booked for the dogs and the rabbits. Get every pet that is a dog or a rabbit.',
-    hint: 'In English it’s “dogs <i>and</i> rabbits”, but no pet is both, so <code>AND</code> gives the empty set. You want everything in either set: the union.',
-    expected: "species = 'dog' OR species = 'rabbit'",
-  },
-  {
-    title: 'Senior cats',
-    prompt: 'Cats aged 4 or older are due for a senior check-up. Get exactly those pets.',
-    hint: 'You want the overlap of two sets: the cats, and the pets with <code>age &gt;= 4</code>.',
-    expected: "species = 'cat' AND age >= 4",
-  },
-  {
-    title: 'No fish',
-    prompt: 'The new carrier takes anything except fish. Get every pet that is not a fish.',
-    hint: 'Light up the fish, then take every other row: the complement. Put <code>NOT</code> in front of a condition.',
-    expected: "NOT species = 'fish'",
-  },
-];
-
-// The core curriculum, easy to hard, for someone who has never written SQL. PRODUCT.md owns its scope.
-export const LESSONS = [
-  { n: 1, title: 'Sets & subsets', topic: 'WHERE · AND · OR · NOT', ready: true },
-  { n: 2, title: 'Pick columns', topic: 'SELECT · DISTINCT' },
-  { n: 3, title: 'Line them up', topic: 'ORDER BY · LIMIT' },
-  { n: 4, title: 'The unknown', topic: 'NULL' },
-  { n: 5, title: 'Stacks', topic: 'GROUP BY · COUNT · SUM' },
-  { n: 6, title: 'Every pair', topic: 'JOIN' },
-  { n: 7, title: 'Sets in, set out', topic: 'subqueries · CTE' },
-];
-
-// The track after the core lessons. Not counted in progress.
-export const NEXT_TRACK = { title: 'Dimensional modeling' };

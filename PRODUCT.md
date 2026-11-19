@@ -32,7 +32,9 @@ they cannot check, and a wrong answer looks exactly like a right one.
 
 Learn SQL shows every query as an operation on a set. Each lesson puts a small table on a 3D grid:
 every row is a bar, every `WHERE` condition lights the rows it keeps all at once, and the result
-set is the overlap you can see. Queries run in the browser on a real SQLite database, and each
+set is the overlap you can see. Every query is drawn as stages, the way a chain of CTEs reads: the
+raw tables first, then one board per step, each a new set made from the one before. The query card
+writes the same stages as a `WITH` query, so by the last lesson CTEs are already familiar. Queries run in the browser on a real SQLite database, and each
 lesson ends with short challenges that check the learner's result set against the expected one.
 
 The core curriculum is short on purpose: seven lessons, easy to hard, that cover what a beginner

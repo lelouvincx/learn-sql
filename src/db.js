@@ -1,8 +1,8 @@
-// Real SQLite (sql.js) behind the filing room. Every run gets a fresh
-// database, so a DROP or UPDATE never breaks the next run.
+// Real SQLite (sql.js) in the browser. Every run gets a fresh database built
+// from SCHEMA, so a DROP or UPDATE never breaks the next run.
 import initSqlJs from 'sql.js';
 import wasmUrl from 'sql.js/dist/sql-wasm-browser.wasm?url';
-import { PETS, SCHEMA } from './data.js';
+import { SCHEMA } from './data.js';
 
 let SQL;
 
@@ -12,15 +12,22 @@ export async function initDb() {
 
 function freshDb() {
   const db = new SQL.Database();
-  for (const t of SCHEMA) db.run(`CREATE TABLE ${t.name} (${t.cols.map((c) => `${c.name} ${c.type}${c.pk ? ' PRIMARY KEY' : ''}`).join(', ')});`);
-  const insert = db.prepare('INSERT INTO pets VALUES (?, ?, ?, ?)');
-  for (const row of PETS) insert.run(row);
-  insert.free();
+  for (const t of SCHEMA) {
+    db.run(`CREATE TABLE ${t.name} (${t.cols.map((c) => `${c.name} ${c.type}${c.pk ? ' PRIMARY KEY' : ''}`).join(', ')});`);
+    const insert = db.prepare(`INSERT INTO ${t.name} VALUES (${t.cols.map(() => '?').join(', ')})`);
+    for (const row of t.data) insert.run(row);
+    insert.free();
+  }
   return db;
 }
 
-// Splits a simple `SELECT … FROM … [WHERE …] [ORDER BY/LIMIT …]` into its
-// clauses so the 3D scene can show which drawer, which gate, which fields.
+// The last statement's result as { columns, rows }; empty when it returns nothing.
+export function query(db, sql) {
+  const last = db.exec(sql).at(-1);
+  return { columns: last?.columns ?? [], rows: last?.values ?? [] };
+}
+
+// Splits a simple `SELECT … FROM … [WHERE …] [ORDER BY/LIMIT …]` into its clauses.
 export function parseQuery(sql) {
   const clean = sql.replace(/--.*$/gm, '').trim().replace(/;\s*$/, '');
   const m = clean.match(
@@ -61,65 +68,61 @@ export function splitCondition(where) {
   return { parts, ops };
 }
 
-function idSet(db, condition) {
-  const res = db.exec(`SELECT id FROM pets${condition ? ` WHERE ${condition}` : ''}`);
-  return new Set((res[0]?.values ?? []).map((v) => v[0]));
-}
-
+const NAMES = SCHEMA.map((t) => t.name).join(' and ');
 function friendly(message) {
   let m = message.match(/no such table: (\S+)/i);
-  if (m) return `There is no drawer labelled “${m[1]}”. The open drawer is pets.`;
+  if (m) return `There is no table called “${m[1]}”. The tables are ${NAMES}.`;
   m = message.match(/no such column: (\S+)/i);
-  if (m) return `The cards have no “${m[1]}” field. Each card has id, name, species and age.`;
-  if (/incomplete input/i.test(message)) return 'The request slip stops mid-sentence. Finish the last clause.';
+  if (m) return `No table here has a “${m[1]}” column. Check the schema above the editor.`;
+  m = message.match(/ambiguous column name: (\S+)/i);
+  if (m) return `Both tables have a “${m[1]}” column. Say which one, as in pets.${m[1]} or owners.${m[1]}.`;
+  if (/incomplete input/i.test(message)) return 'The query stops mid-sentence. Finish the last clause.';
   return message;
 }
 
-export function runQuery(sql) {
+// Runs the learner's SQL. `analyze(db, sql, result)` is the lesson's hook: it
+// reads the same fresh database to work out what the grid should show, and
+// whatever it returns arrives as result.analysis. A failing hook only costs
+// the animation, never the result.
+export function runQuery(sql, analyze) {
   const db = freshDb();
   try {
-    const results = db.exec(sql);
-    const last = results.at(-1) ?? { columns: [], values: [] };
-    const parsed = parseQuery(sql);
-    // The scene lights each top-level condition as its own set, then shows
-    // the subset the whole WHERE keeps.
-    let passIds = null;
-    let atoms = [];
-    let ops = [];
-    if (parsed && parsed.table.toLowerCase() === 'pets') {
+    const result = { sql, ...query(db, sql), parsed: parseQuery(sql), analysis: null };
+    if (analyze) {
       try {
-        passIds = idSet(db, parsed.where);
-        if (parsed.where) {
-          const split = splitCondition(parsed.where);
-          ops = split.ops;
-          atoms = split.parts.map((text) => {
-            const not = text.match(/^not\s+([\s\S]+)$/i);
-            return {
-              text,
-              inner: not ? not[1] : null,
-              innerIds: not ? idSet(db, not[1]) : null,
-              ids: idSet(db, text),
-            };
-          });
-        }
+        result.analysis = analyze(db, sql, result) ?? null;
       } catch {
-        passIds = null;
+        result.analysis = null;
       }
     }
-    return { columns: last.columns, rows: last.values, parsed, passIds, atoms, ops };
+    return result;
   } catch (err) {
-    return { error: friendly(err.message), parsed: parseQuery(sql) };
+    return { sql, error: friendly(err.message), parsed: parseQuery(sql), analysis: null };
   } finally {
     db.close();
   }
 }
 
-// The pets a condition keeps, for checking challenge answers.
-export function idsFor(condition) {
+// Runs SQL on a fresh database and gives { columns, rows }, for answer keys.
+export function resultOf(sql) {
   const db = freshDb();
   try {
-    return idSet(db, condition);
+    return query(db, sql);
   } finally {
     db.close();
   }
+}
+
+// Whether two results hold the same rows: as multisets (a set has no order),
+// or in sequence when the question asks for an order.
+export function sameRows(a, b, ordered = false) {
+  if (a.columns.length !== b.columns.length || a.rows.length !== b.rows.length) return false;
+  const key = (r) => JSON.stringify(r);
+  const ka = a.rows.map(key);
+  const kb = b.rows.map(key);
+  if (!ordered) {
+    ka.sort();
+    kb.sort();
+  }
+  return ka.every((k, i) => k === kb[i]);
 }
