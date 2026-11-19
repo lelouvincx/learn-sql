@@ -74,13 +74,16 @@ export const CHALLENGES = [
   },
 ];
 
+// The core curriculum, easy to hard, for someone who has never written SQL. PRODUCT.md owns its scope.
 export const LESSONS = [
   { n: 1, title: 'Sets & subsets', topic: 'WHERE · AND · OR · NOT', ready: true },
-  { n: 2, title: 'Shadows', topic: 'SELECT · DISTINCT' },
-  { n: 3, title: 'Every pair', topic: 'JOIN' },
-  { n: 4, title: 'Stacks', topic: 'GROUP BY · COUNT' },
-  { n: 5, title: 'Combine sets', topic: 'UNION · INTERSECT · EXCEPT' },
-  { n: 6, title: 'The unknown', topic: 'NULL' },
-  { n: 7, title: 'Line them up', topic: 'ORDER BY · LIMIT' },
-  { n: 8, title: 'Sets in, set out', topic: 'subqueries · CTE' },
+  { n: 2, title: 'Pick columns', topic: 'SELECT · DISTINCT' },
+  { n: 3, title: 'Line them up', topic: 'ORDER BY · LIMIT' },
+  { n: 4, title: 'The unknown', topic: 'NULL' },
+  { n: 5, title: 'Stacks', topic: 'GROUP BY · COUNT · SUM' },
+  { n: 6, title: 'Every pair', topic: 'JOIN' },
+  { n: 7, title: 'Sets in, set out', topic: 'subqueries · CTE' },
 ];
+
+// The track after the core lessons. Not counted in progress.
+export const NEXT_TRACK = { title: 'Dimensional modeling' };
